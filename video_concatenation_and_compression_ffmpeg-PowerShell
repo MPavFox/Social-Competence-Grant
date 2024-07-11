@@ -1,0 +1,56 @@
+#Set directory
+$dir1 = ""
+
+#set path to directory
+Set-Location -Path $dir1
+
+#Create folder for outputs in the directory
+New-Item -Name "Output" -ItemType Directory
+
+#create an array of groups
+$groups = @('A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P')#all groups
+$group4 = @('B','D','F','H','J','L','N','P')#subset of groups with 4 cameras
+$cameras = @('_1_','_2_','_3_','_4_')#camera number
+
+#loop through each group to get videos to concatenate
+foreach ($item in $groups) {
+		if ($item -in $group4){#if item is one of the groups with 4 cameras 
+			foreach ($i in $cameras){#loop through each camera
+			Get-childitem -Filter *mp4 -Recurse -Name| Where-Object {$_ -Match $item -and $_ -Match $i}|foreach {"file "+"'"+$_+"'"}|Out-File mylist.txt
+
+
+		$output_name = ".\Output\$item" + "$i" + "merged.mp4"
+		$final_output = ".\Output\$item" + "$i" + "final.mp4"
+
+		#function to concatenate videos#
+		ffmpeg -f concat -safe 0 -i mylist.txt -c copy "$output_name"
+
+		#function to compress videos,remove audio and limit duration to 1 hour
+		ffmpeg -i $output_name -vcodec libx264 -crf 24 -an -t 01:00:00 $final_output
+
+		#remove concatenated video
+		remove-item $output_name
+
+			}
+		}
+
+		else{#if group is not in groups with 4 cameras
+		#extract names of videos and store them as text#
+		Get-childitem * -include $item* -exclude "Output" -Name|foreach {"file "+"'"+$_+"'"}|Out-File mylist.txt 
+
+		$output_name = ".\Output\$item" + "_merged.mp4"
+		$final_output = ".\Output\$item" + "_final.mp4"
+
+		#function to concatenate videos#
+		ffmpeg -f concat -safe 0 -i mylist.txt -c copy "$output_name"
+
+		#function to compress videos,remove audio and limit duration to 1 hour
+		ffmpeg -i $output_name -vcodec libx264 -crf 24 -an -t 01:00:00 $final_output
+
+		#remove concatenated video
+		remove-item $output_name
+		}	 
+	}
+
+#delete mylist.txt once process is done
+	remove-item mylist.txt
