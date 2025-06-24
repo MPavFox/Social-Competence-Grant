@@ -1,0 +1,42 @@
+#Create folder for outputs in the directory
+mkdir Output
+
+groups=(A_ B_ C_ D_ E_ F_ G_ H_ I_ J_ K_ L_ M_ N_ O_ P_)
+group4=(B_ D_ F_ H_ J_ L_ N_ P_)
+cameras=(_1_ _2_ _3_ _4_)
+
+#! /bin/bash
+for item in "${groups[@]}";do
+if [[ ${group4[@]} =~ $item ]]; then
+	for i in ${cameras[@]}; do
+	printf "file '%s'\n" *.MP4| grep $item| grep $i  > mylist.txt		
+	input="./mylist.txt"
+	#extract date of video for output name
+	date="$(printf "%s\n" *.MP4| grep $item| grep -o -P -m 1 "(?<=$item).*(?=$i)")"
+	#extract camera id without the last underscore
+	camera=${i::-1}
+	outputname="./Output/${item}${i}merged.mp4"
+	finalname="./Output/${item}HC_${date}${camera}.mp4"
+	#function to concatenate videos#
+	ffmpeg -f concat -safe 0 -i ${input} -c copy "${outputname}"
+	#function to compress videos,remove audio and limit duration to 1 hour
+	ffmpeg -i ${outputname} -vcodec libx264 -crf 24 -an -t 01:00:00 "${finalname}"
+	#remove concatenated video
+	rm $outputname
+done
+else
+	printf "file '%s'\n" *.MP4| grep $item  > mylist.txt
+	input="./mylist.txt"
+	#extract date of video for output name
+	date="$(printf "%s\n" *.MP4| grep $item| grep -o -P -m 1 "(?<=$item).*(?=_)")"
+	outputname="./Output/${item}_merged.mp4"
+	finalname="./Output/${item}HC_${date}.mp4"
+	#function to concatenate videos#
+	ffmpeg -f concat -safe 0 -i ${input} -c copy "${outputname}"
+	#function to compress videos,remove audio and limit duration to 1 hour
+	ffmpeg -i ${outputname} -vcodec libx264 -crf 24 -an -t 01:00:00 "${finalname}"
+	#remove concatenated video
+	rm $outputname
+fi
+done
+rm mylist.txt
